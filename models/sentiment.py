@@ -12,7 +12,7 @@ from transformers import (
 from langchain.tools import Tool
 
 MODEL_PATH = "./my_sentiment_model"
-CSV_PATH = r"C:\Users\PCM\Desktop\taki_analysis\data\cr.csv"
+CSV_PATH = '/content/drive/MyDrive/taki_data/cr.csv'
 MODEL_NAME = "CAMeL-Lab/bert-base-arabic-camelbert-mix-sentiment"
 
 
