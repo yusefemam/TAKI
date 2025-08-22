@@ -2,12 +2,10 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
 from dotenv import load_dotenv
 
-# تحميل المتغيرات من .env
 load_dotenv()
 
 app = Flask(__name__)
 
-# استيراد الموديلات (لو موجودة)
 try:
     from models.summarizer import summarize_text
     from models.corrector import correct_text
@@ -18,9 +16,15 @@ except ImportError as e:
     print(f"Error importing model: {e}")
 
 
+def is_arabic(text):
+    for ch in text:
+        if '\u0600' <= ch <= '\u06FF' or '\u0750' <= ch <= '\u077F' or '\u08A0' <= ch <= '\u08FF':
+            return True
+    return False
+
+
 @app.route("/")
 def home():
-    # إعادة التوجيه لصفحة الشات
     return redirect(url_for("chat_page"))
 
 
@@ -28,13 +32,15 @@ def home():
 def chat_page():
     if request.method == "POST":
         try:
-            data = request.get_json()  # استلام JSON من الفرونت
+            data = request.get_json()
             input_text = data.get("text", "")
             selected_task = data.get("task", "")
             result = None
 
             if not input_text.strip():
                 result = "⚠️ الرجاء إدخال نص صالح للمعالجة"
+            elif not is_arabic(input_text):
+                result = "⚠️ ندعم فقط اللغة العربية"
             elif not selected_task:
                 result = "⚠️ الرجاء اختيار مهمة"
             else:
@@ -54,10 +60,8 @@ def chat_page():
         except Exception as e:
             return jsonify({"result": f"❌ Error: {str(e)}"})
 
-    # لو دخلت بالرابط مباشرة → يفتح الـ HTML
     return render_template("chat.html")
 
 
 if __name__ == "__main__":
-    # خلي السيرفر يشتغل على أي host علشان ينفع ترفعه
     app.run(host="0.0.0.0", port=5000, debug=True)
