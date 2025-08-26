@@ -1,67 +1,51 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
-import os
-from dotenv import load_dotenv
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import accuracy_score
 
-load_dotenv()
+data = pd.read_csv(r'F:\Desktop\taki_analysis\data\spam_ham_dataset.csv')
+data = data.dropna(subset=['text', 'label'])
 
-app = Flask(__name__)
+data.loc[data['label'] == 'spam', 'label'] = 0
+data.loc[data['label'] == 'ham', 'label'] = 1
+data['label'] = data['label'].astype(int)
 
-try:
-    from models.summarizer import summarize_text
-    from models.corrector import correct_text
-    from models.sentiment import sentiment_tool_func as analyze_sentiment
-    from models.diagnostics import analyze_text
-    from models.machine_translation import translate_text
-except ImportError as e:
-    print(f"Error importing model: {e}")
+X = data['text']
+y = data['label']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+vectorizer = TfidfVectorizer()
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_vec, y_train)
+
+y_pred = model.predict(X_test_vec)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model accuracy: {accuracy * 100:.2f}%")
+
+pipeline = make_pipeline(TfidfVectorizer(), LogisticRegression(max_iter=1000))
+pipeline.fit(X, y)
 
 
-def is_arabic(text):
-    for ch in text:
-        if '\u0600' <= ch <= '\u06FF' or '\u0750' <= ch <= '\u077F' or '\u08A0' <= ch <= '\u08FF':
-            return True
-    return False
+def mail(text):
+    prediction = pipeline.predict([text])[0]
+    probabilities = pipeline.predict_proba([text])[0]
+    confidence = np.max(probabilities)
 
+    label = "Not spam" if prediction == 1 else "Spam"
 
-@app.route("/")
-def home():
-    return redirect(url_for("chat_page"))
+    return {"label": label}
 
-
-@app.route("/chat_page", methods=["GET", "POST"])
-def chat_page():
-    if request.method == "POST":
-        try:
-            data = request.get_json()
-            input_text = data.get("text", "")
-            selected_task = data.get("task", "")
-            result = None
-
-            if not input_text.strip():
-                result = "⚠️ الرجاء إدخال نص صالح للمعالجة"
-            elif not is_arabic(input_text):
-                result = "⚠️ ندعم فقط اللغة العربية"
-            elif not selected_task:
-                result = "⚠️ الرجاء اختيار مهمة"
-            else:
-                if selected_task == "correction":
-                    result = correct_text(input_text)
-                elif selected_task == "summary":
-                    result = summarize_text(input_text)
-                elif selected_task == "sentiment":
-                    result = analyze_sentiment(input_text)
-                elif selected_task == "diagnostics":
-                    result = analyze_text(input_text)
-                elif selected_task == "translation":
-                    result = translate_text(input_text)
-
-            return jsonify({"result": result})
-
-        except Exception as e:
-            return jsonify({"result": f"❌ Error: {str(e)}"})
-
-    return render_template("chat.html")
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    test_text = "Congratulations! You've won a free ticket to Bahamas. Click here to claim."
+    result = mail(test_text)
+    print(f"label: {result['label']}")
