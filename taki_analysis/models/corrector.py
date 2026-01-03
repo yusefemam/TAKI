@@ -11,7 +11,7 @@ MODEL_ARABIC = "CAMeL-Lab/arabart-qalb15-gec-ged-13"
 
 
 def load_pipeline(model_name):
-    print(f"🌟 Loading model: {model_name}")
+    print(f"Loading model: {model_name}")
     return pipeline(
         "text2text-generation",
         model=AutoModelForSeq2SeqLM.from_pretrained(model_name),
@@ -24,9 +24,7 @@ grammar_pipeline = load_pipeline(MODEL_ARABIC)
 
 
 def correct_text(text: str) -> str:
-    """
-    تصلح النصوص العربية (بتقسيمها لجمل قصيرة لو أطول من حد الموديل)
-    """
+
     sentences = nltk.sent_tokenize(text) 
     corrected_sentences = []
 
@@ -51,6 +49,7 @@ correction_tool = Tool(
 
 
 if __name__ == "__main__":
-    sample = "انا بحب البرمجه جدا و اريد ان اتعلم. هذا نص طويل جدا قد يسبب مشاكل اذا لم نقسمه."
-    print("📝 Original:", sample)
-    print("✅ Corrected:", correct_text(sample))
+    sample = "I love codng"
+    print("Original:", sample)
+    print("Corrected:", correct_text(sample))
+
